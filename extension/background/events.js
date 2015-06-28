@@ -4,6 +4,7 @@ var myHome = myHome || {};
 myHome.events = {
 		lastEventTimestamp: -1,	// last received event timestamp
 		newEventsCounter: 0,	// how many new events were received since last visit
+		syncEventsLimit: 60		// how many events are downloaded during synchronization
 };
 
 // update badge text with information about new events 
@@ -88,4 +89,10 @@ myHome.events.onEvents = function(status, payload, url) {
 	} catch (e) {
 		console.error(e);
 	}
+};
+
+// synchronize events with the cloud
+myHome.events.sync = function() {
+	// download latest events from the cloud
+	gigaset.request.get(gigaset.events.last(myHome.events.syncEventsLimit), myHome.events.onEvents);
 };
