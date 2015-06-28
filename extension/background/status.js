@@ -1,6 +1,7 @@
 var myHome = myHome || {};
 
 myHome.status = {
+		// all detected issues
 		issues: {
 			intrusion: {
 				cloud: []
@@ -22,6 +23,67 @@ myHome.status = {
 				sensors: []
 			},
 		},
+
+		// sensitivity for each type of issues
+		sensitivity: {
+			errors: ["intrusion", "connection"],
+			warnings: ["position", "battery"],
+			infos: ["firmware"]
+		},
+		
+		// My Home health status
+		health: {
+			errors: [],
+			warnings: [],
+			infos: []
+		},
+		
+		refreshDelay: 1000	// because we are using several endpoint to determine state we are
+							// delaying (since last response) "refresh" time by this value (in ms)
+							// because of that we can prevent many updates with incomplete data
+};
+
+
+
+// get My Home health status
+myHome.status.getHealth = function(issues, sensitivity) {
+	
+	var health = {};
+	
+	// find all sensitivity levels
+	var levels = Object.keys(sensitivity);
+	
+	// check all issues for all levels
+	for (var i = 0; i < levels.length; i++) {
+		var level = levels[i];
+		
+		// initialize health object
+		health[level] = [];
+		
+		// check all issues types defined by this level 
+		for (var j = 0; j < sensitivity[level].length; j++) {
+			var issueType = sensitivity[level][j];
+			
+			// find all components in this issue
+			var elements = Object.keys(issues[issueType]);
+
+			// check if component contains issue inside
+			for (var k = 0; k < elements.length; k++) {
+				var element = elements[k];
+				
+				for (var l = 0; l < issues[issueType][element].length; l++) {
+					var issue = issues[issueType][element][l];
+					
+					issue.issueSource = issueType;
+					issue.element = element;
+					
+					health[level].push(issue);
+				}
+			}
+		}
+	}
+	
+	return health;
 };
 
 myHome.status.clearIssues = function(component) {
@@ -66,7 +128,7 @@ myHome.status.onHealth = function(status, payload, url) {
 			
 			switch (true) {
 			case (message == "system_intrusion"):
-				myHome.status.issues.intrusion.cloud.push(message)
+				myHome.status.issues.intrusion.cloud.push(message);
 				break;
 
 			default:
@@ -213,13 +275,61 @@ myHome.status.onBasestations = function(status, payload, url) {
 	}
 };
 
+// refresh My Home health status
+myHome.status.refresh = function() {
+	// evaluate issues
+	var health = myHome.status.getHealth(myHome.status.issues, myHome.status.sensitivity);
+	
+	// update cached status
+	myHome.status.health = health;
+	
+	var icon = {path: "../icons/home48.png"};
+	
+	// show health via My Home icon
+	if (health.errors.length > 0) {
+		icon = {path: "../icons/home48_yellow.png"};
+	} else if (health.warnings.length > 0) {
+		icon = {path: "../icons/home48_yellow.png"};
+	} else if (health.infos.length > 0) {
+		icon = {path: "../icons/home48_yellow.png"};
+	};
+
+	chrome.browserAction.setIcon(icon);
+};
+
 // synchronize status
 myHome.status.sync = function(){
+
+	// timer for delayed refresh
+	var timer = undefined;
+	// refresh status with some delay
+	function delayedRefresh() {
+		// clear previous timer if any
+		if (timer !== undefined) {
+			window.clearTimeout(timer);
+		}
+		// restart refresh timer
+		timer = window.setTimeout(myHome.status.refresh, myHome.status.refreshDelay);
+	};
+	
 	// synchronize with health endpoint
-	gigaset.request.get(gigaset.health(), myHome.status.onHealth);
+	gigaset.request.get(gigaset.health(), function(status, payload, url) {
+		myHome.status.onHealth(status, payload, url);
+		delayedRefresh();
+	});
+			
 	// synchronize basestatio & sensors
-	gigaset.request.get(gigaset.basestations.info(), myHome.status.onBasestations);
+	gigaset.request.get(gigaset.basestations.info(), function(status, payload, url) {
+		myHome.status.onBasestations(status, payload, url);
+		delayedRefresh();
+	});
+	
 	// synchronize camera
-	gigaset.request.get(gigaset.cameras.info(), myHome.status.onCameras);
+	gigaset.request.get(gigaset.cameras.info(), function(status, payload, url) {
+		myHome.status.onCameras(status, payload, url);
+		delayedRefresh();
+	});
 	
 };
+
+
