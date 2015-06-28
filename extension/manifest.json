@@ -3,6 +3,7 @@
 
     "name": "My Home",
     "description": "Gigaset elements extension for Chrome.",
+    "homepage_url": "https://github.com/filug/MyHome/wiki",
     "version": "0.0.2",
 
     "browser_action": {
@@ -11,17 +12,23 @@
             "48": "icons/home48.png",
             "128": "icons/home128.png"
         },
-        "default_title": "My Home"
+        "default_title": "My Home",
+        "default_popup": "popup/myhome.html"
     },
 
     "icons": {
         "16": "icons/home16.png",
         "48": "icons/home48.png",
         "128": "icons/home128.png"
-//  },
-//
-//  "background": {
-//      "page": "background/background.html",
-//      "persistent": true
-    }
+    },
+
+    "background": {
+        "page": "background/background.html",
+        "persistent": true
+    },
+    
+    "permissions": [
+        "alarms",
+        "tts"
+    ]
 }
