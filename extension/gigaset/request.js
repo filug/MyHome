@@ -14,21 +14,20 @@ gigaset.request.get = gigaset.request.get || function(url, callback) {
 			
 			console.debug("[" + status + "] GET " + url);
 			
-			// analyze payload
-			var payload = undefined;
-			try {
-				payload = JSON.parse(request.responseText);
-			} catch (e) {
-				console.error(e);
+			// deliver response only on success
+			if (status != 200) {
+				console.debug("response not delivered to the callback");
+				return;
 			}
-				
-			// forward response to the callback
+			
 			try {
+				// analyze payload
+				var payload = JSON.parse(request.responseText);
+				// forward response to the callback
 				callback(status, payload, url);
 			} catch (e) {
 				console.error(e);
 			}
-
 		}
 	};
 
