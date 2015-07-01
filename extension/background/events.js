@@ -3,58 +3,19 @@ var myHome = myHome || {};
 
 myHome.events = {
 		lastEventTimestamp: -1,	// last received event timestamp
-		newEventsCounter: 0,	// how many new events were received since last visit
-		syncEventsLimit: 60		// how many events are downloaded during synchronization
-};
-
-// update badge text with information about new events 
-myHome.events.updateNewEventsCounter = function(newEventsCounter) {
-	// append new events if they are defined
-	if (newEventsCounter !== undefined) {
-		myHome.events.newEventsCounter += newEventsCounter;
-	}
-	
-	var counter = myHome.events.newEventsCounter;	// how many new events (in total) we have?
-	var text = "";											// text to display in badge icon
-
-	// only 3 digits can be displayed as badge text
-	if (counter > 999) {
-		text = "...";
-	} else if (counter > 0){
-		text = counter.toString();
-	} 
-	
-	// show updated counter
-	chrome.browserAction.setBadgeText({text: text});
-	console.debug("new events (in total): " + counter);
-};
-
-// clear new events counter
-myHome.events.clearNewEventsCounter = function() {
-	myHome.events.newEventsCounter = 0;
-	myHome.events.updateNewEventsCounter();
-};
-
-// check new events
-myHome.events.onNewEvents = function(events, timestamps) {
-	var count = timestamps.length;
-	
-	// update "new events" counter 
-	myHome.events.updateNewEventsCounter(count);
+		limit: 60				// how many events are downloaded during synchronization
 };
 
 // find new events in the cloud response
-myHome.events.onEvents = function(status, payload, url) {	
-	// don't analyze payload if response code shows some problems
-	if( status != 200 ){
-		return;
-	}
+myHome.events.onEvents = function(payload) {
+	
+	var newEvents = {
+			events: payload,
+			timestamps: []
+	};
 	
 	// received events are sorted - first is the latest one
 	try {
-		// array with timestamps for new events 
-		var newEvents = [];
-		
 		// extract events from the cloud
 		var events = payload.events;
 
@@ -70,29 +31,34 @@ myHome.events.onEvents = function(status, payload, url) {
 				var event = events[i];
 				// if this is new event add it to the list
 				if (event.ts > myHome.events.lastEventTimestamp) {
-					newEvents.push(event.ts);
+					newEvents.timestamps.push(event.ts);
 				}
 			}
 		}
 		
-		console.debug("new events (from the cloud): " + newEvents.length);
-
-		// check if we have new events
-		if (newEvents.length > 0) {
-			// if yes forward them
-			myHome.events.onNewEvents(events, newEvents);
-		};
+		console.debug("new events: " + newEvents.timestamps.length);
 		
 		// update time of the last event
 		myHome.events.lastEventTimestamp = events[0].ts;
-
 	} catch (e) {
 		console.error(e);
 	}
+	
+	return newEvents;
 };
 
 // synchronize events with the cloud
-myHome.events.sync = function() {
+myHome.events.sync = function(callback) {
+	
+	var url = gigaset.events.last(myHome.events.limit);
+	
 	// download latest events from the cloud
-	gigaset.request.get(gigaset.events.last(myHome.events.syncEventsLimit), myHome.events.onEvents);
+	gigaset.request.get(url, function(status, payload) {
+
+		// find new events
+		var newEvents = myHome.events.onEvents(payload);
+	
+		// forward them to the callback
+		callback(newEvents);
+	});
 };
