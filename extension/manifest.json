@@ -8,18 +8,15 @@
 
     "browser_action": {
         "default_icon": {
-            "16": "icons/home/16/green.png",
-            "32": "icons/home/32/green.png",
-            "48": "icons/home/48/green.png"
+            "19": "icons/home/19/green.png",
+            "38": "icons/home/38/green.png"
         },
         "default_title": "My Home",
         "default_popup": "popup/myhome.html"
     },
 
     "icons": {
-        "16": "icons/home/16/green.png",
-        "48": "icons/home/48/green.png",
-        "128": "icons/home/128/green.png"
+        "48": "icons/home/48/green.png"
     },
 
     "background": {

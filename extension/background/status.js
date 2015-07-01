@@ -283,18 +283,19 @@ myHome.status.refresh = function() {
 	// update cached status
 	myHome.status.health = health;
 	
-	var icon = {path: "../icons/home48.png"};
+	var icon = "green";
 	
 	// show health via My Home icon
 	if (health.errors.length > 0) {
-		icon = {path: "../icons/home48_yellow.png"};
+		icon = "red";
 	} else if (health.warnings.length > 0) {
-		icon = {path: "../icons/home48_yellow.png"};
+		icon = "yellow";
 	} else if (health.infos.length > 0) {
-		icon = {path: "../icons/home48_yellow.png"};
+		icon = "blue";
 	};
 
-	chrome.browserAction.setIcon(icon);
+	// set correct My Home icon
+	myHome.icons.setExtensionIcon(icon);
 };
 
 // synchronize status
@@ -329,7 +330,6 @@ myHome.status.sync = function(){
 		myHome.status.onCameras(status, payload, url);
 		delayedRefresh();
 	});
-	
 };
 
 
