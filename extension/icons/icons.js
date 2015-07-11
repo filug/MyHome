@@ -20,3 +20,7 @@ myHome.icons.setExtensionIcon = function(color) {
 		console.error(e);
 	}
 };
+
+myHome.icons.getNotificationIcon = function() {
+	return chrome.extension.getURL("icons") + "/home/48/green.png";
+};

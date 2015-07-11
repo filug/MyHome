@@ -25,9 +25,9 @@ gigaset.events.inTimeRange = function(from, to, limit) {
 	
 	// 
 	if (limit === undefined) {
-		return gigaset.events.get() + "?from_ts=" + from + "&to_ts=" + to;
+		return gigaset.events.last() + "?from_ts=" + from + "&to_ts=" + to;
 	} else {
-		return gigaset.events.get() + "?from_ts=" + from + "&to_ts=" + to + "&limit=" + limit;;
+		return gigaset.events.last() + "?from_ts=" + from + "&to_ts=" + to + "&limit=" + limit;;
 	};
 };
 

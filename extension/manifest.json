@@ -5,6 +5,7 @@
     "description": "Access to Gigaset elements from Chrome browser.",
     "homepage_url": "https://github.com/filug/MyHome/wiki",
     "version": "0.0.2",
+    "minimum_chrome_version": "42",
 
     "browser_action": {
         "default_icon": {
@@ -20,11 +21,18 @@
     },
 
     "background": {
-        "page": "background/background.html",
+        "scripts": ["background/background.js",
+                    "background/events.js",
+                    "background/notifications.js",
+                    "gigaset/request.js",
+                    "gigaset/endpoints.js",
+                    "icons/icons.js"],
         "persistent": true
     },
     
     "permissions": [
-        "alarms"
+        "alarms",
+        "storage",
+        "notifications"
     ]
 }
