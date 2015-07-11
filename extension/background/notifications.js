@@ -23,7 +23,6 @@ myHome.notifications.onNewEvents = function(request, sender, response) {
 	// find how many new events from NOT blacklisted sensors we have
 	chrome.storage.local.get("notify_blacklist_id", function(storage) {
 		var blacklist = storage.notify_blacklist_id || [];
-		var unread = storage.unread_events || 0;
 	
 		// extract all new events
 		var events = request.newEvents.events;
@@ -61,7 +60,7 @@ myHome.notifications.onNewEvents = function(request, sender, response) {
 				}
 				
 				// check if this sensor is blacklisted or not
-				if( blacklist.indexOf(id) > 0 ) {
+				if( blacklist.indexOf(id) >= 0 ) {
 					console.debug("Element %s is blacklisted", id);
 				} else {
 					notifyAbout.push(item);
