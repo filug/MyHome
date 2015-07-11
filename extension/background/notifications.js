@@ -85,7 +85,6 @@ myHome.notifications.onNewEvents = function(request, sender, response) {
 				
 			// show notification
 			chrome.notifications.create("MyHome", popup);
-			
 		}
 	});
 };
