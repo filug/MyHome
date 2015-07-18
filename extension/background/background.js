@@ -80,6 +80,7 @@ myHome.background.onNewEvents = function(request, sender, response) {
 myHome.background.onAlarm = function(alarm) {
 	if (alarm === undefined || alarm.name == "myHome.background.sync") {
 		chrome.runtime.sendMessage({name : "myHome.events.sync"});
+		chrome.runtime.sendMessage({name : "myHome.status.sync"});
 	}
 };
 
@@ -89,18 +90,19 @@ myHome.background.onAlarm = function(alarm) {
 chrome.runtime.onInstalled.addListener(function(details) {
 	console.log("My Home started");
 	
-	// register callback to synchronize extension with the Gigaset elements cloud
-	chrome.alarms.onAlarm.addListener(myHome.background.onAlarm);
-	
-	// new events callback
-	chrome.runtime.onMessage.addListener(myHome.background.onNewEvents);
-	
-	// react on storage changes
-	chrome.storage.onChanged.addListener(myHome.background.onStorageChanges);
-
 	// synchronize every 1 minute
 	chrome.alarms.create("myHome.background.sync", {periodInMinutes: 1});
 	
 	// and synchronize now
 	myHome.background.onAlarm();
 });
+
+
+// register callback to synchronize extension with the Gigaset elements cloud
+chrome.alarms.onAlarm.addListener(myHome.background.onAlarm);
+
+// new events callback
+chrome.runtime.onMessage.addListener(myHome.background.onNewEvents);
+
+// react on storage changes
+chrome.storage.onChanged.addListener(myHome.background.onStorageChanges);

@@ -24,10 +24,11 @@
         "scripts": ["background/background.js",
                     "background/events.js",
                     "background/notifications.js",
+                    "background/status.js",
                     "gigaset/request.js",
                     "gigaset/endpoints.js",
                     "icons/icons.js"],
-        "persistent": true
+        "persistent": false
     },
     
     "permissions": [

@@ -114,14 +114,10 @@ myHome.notifications.onClicked= function(notificationId) {
 	chrome.notifications.clear(notificationId);
 };
 
-/**
- * Initialize MyHome notifications.
- */
-chrome.runtime.onInstalled.addListener(function(details) {
-	// new events callback
-	chrome.runtime.onMessage.addListener(myHome.notifications.onNewEvents);
-	
-	// reactions for notifications
-	chrome.notifications.onClosed.addListener(myHome.notifications.onClosed);
-	chrome.notifications.onClicked.addListener(myHome.notifications.onClicked);
-});
+
+// new events callback
+chrome.runtime.onMessage.addListener(myHome.notifications.onNewEvents);
+
+// reactions for notifications
+chrome.notifications.onClosed.addListener(myHome.notifications.onClosed);
+chrome.notifications.onClicked.addListener(myHome.notifications.onClicked);

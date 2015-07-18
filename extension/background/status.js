@@ -231,13 +231,5 @@ myHome.status.sync = function(request, sender, response){
 };
 
 
-/**
- * Configure myHome.events handler.
- */
-chrome.runtime.onInstalled.addListener(function(details) {
-	// myHome.events.sync callback
-	chrome.runtime.onMessage.addListener(myHome.status.sync);
-
-	console.debug("myHome.status installed");
-});
-
+// "myHome.status.sync" request handler 
+chrome.runtime.onMessage.addListener(myHome.status.sync);

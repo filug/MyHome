@@ -57,12 +57,5 @@ myHome.events.sync = function(request, sender, response) {
 };
 
 
-/**
- * Configure myHome.events handler.
- */
-chrome.runtime.onInstalled.addListener(function(details) {
-	// myHome.events.sync callback
-	chrome.runtime.onMessage.addListener(myHome.events.sync);
-
-	console.debug("myHome.events installed");
-});
+// myHome.events.sync callback
+chrome.runtime.onMessage.addListener(myHome.events.sync);
