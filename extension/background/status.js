@@ -1,335 +1,243 @@
 var myHome = myHome || {};
+myHome.status = {};
 
-myHome.status = {
-		// all detected issues
-		issues: {
-			intrusion: {
-				cloud: []
-			},
-			connection: {
-				basestations: [],
-				sensors: [],
-				cameras: []
-			},
-			firmware: {
-				basestations: [],
-				sensors: [],
-				cameras: []
-			},
-			position: {
-				sensors: []
-			},
-			battery: {
-				sensors: []
-			},
-		},
 
-		// sensitivity for each type of issues
-		sensitivity: {
-			errors: ["intrusion", "connection"],
-			warnings: ["position", "battery"],
-			infos: ["firmware"]
-		},
-		
-		// My Home health status
-		health: {
-			errors: [],
-			warnings: [],
-			infos: []
-		},
-		
-		refreshDelay: 1000	// because we are using several endpoint to determine state we are
-							// delaying (since last response) "refresh" time by this value (in ms)
-							// because of that we can prevent many updates with incomplete data
+/**
+ * Append issue to the list.
+ */
+myHome.status.appendIssue = function(list, device, issue) {
+	// clone device info because we original one can be reused for other issues
+	var details = JSON.parse(JSON.stringify(device));
+	details.issue = issue;
+	list.push(details);
 };
 
 
-
-// get My Home health status
-myHome.status.getHealth = function(issues, sensitivity) {
-	
-	var health = {};
-	
-	// find all sensitivity levels
-	var levels = Object.keys(sensitivity);
-	
-	// check all issues for all levels
-	for (var i = 0; i < levels.length; i++) {
-		var level = levels[i];
-		
-		// initialize health object
-		health[level] = [];
-		
-		// check all issues types defined by this level 
-		for (var j = 0; j < sensitivity[level].length; j++) {
-			var issueType = sensitivity[level][j];
-			
-			// find all components in this issue
-			var elements = Object.keys(issues[issueType]);
-
-			// check if component contains issue inside
-			for (var k = 0; k < elements.length; k++) {
-				var element = elements[k];
-				
-				for (var l = 0; l < issues[issueType][element].length; l++) {
-					var issue = issues[issueType][element][l];
-					
-					issue.issueSource = issueType;
-					issue.element = element;
-					
-					health[level].push(issue);
-				}
-			}
-		}
-	}
-	
-	return health;
-};
-
-myHome.status.clearIssues = function(component) {
-	// find all keys in "issues"
-	var keys = Object.keys(myHome.status.issues);
-	
-	// check all issues
-	for (var i = 0; i < keys.length; i++) {
-		// issue node
-		var issue = myHome.status.issues[keys[i]];
-		// if requested component is available 
-		if (issue.hasOwnProperty(component)) {
-			// clear all issues available here
-			issue[component] = [];
-		}
-	}
-};
-
-// /api/v2/me/health callback
+/**
+ * /api/v2/me/health callback.
+ *
+ * Endpoint is showing status in very inconvenient way i.e.:
+ *  - only one "failure" is presented,
+ *  - information about camera are not presented at all,
+ * 
+ * The only one sensible thing presented here is "intrusion status state".
+ */
 myHome.status.onHealth = function(status, payload, url) {
-	// There is a lot of issues with this endpoint:
-	// - information about camera are not displayed,
-	// - only one "failure" is displayed.
-	//
-	// That's the reason why only few of information from this endpoint are used
-	
-	// only response 200 contains valid data 
-	if (status != 200) {
-		return;
-	}
-	
-	
-	// cleanup previous cloud issues
-	myHome.status.clearIssues("cloud");
-	
-	try {
-		// most of the issues are detected in the other way, here only information about "intrusion"
-		// is useful
+
+	// read previous "intrusion state"
+	chrome.storage.local.get("health.intrusion", function(storage) {
+		var intrusion = storage["health.intrusion"] || {};
+		
+		// re-initialize with default value
+		intrusion.cloud = [];
+		
+		// when "system_health" is not "green" information about 
+		// failure reason is defined by "status_msg_id"
 		if (payload.hasOwnProperty("status_msg_id")) {
 			// extract info about cloud status
 			var message = payload.status_msg_id;
 			
 			switch (true) {
 			case (message == "system_intrusion"):
-				myHome.status.issues.intrusion.cloud.push(message);
+				intrusion.cloud.push(message);
 				break;
 
 			default:
 				break;
-			}
-		}
-	} catch (e) {
-		console.error(e);
-	}
+			};
+		};
+		
+		// publish collected information 
+		chrome.storage.local.set({"health.intrusion": intrusion});
+	});
 };
 
 
-// api/v1/me/cameras callback
+/**
+ * api/v1/me/cameras callback
+ * 
+ * Check all cameras and detect:
+ *  - offline status,
+ *  - outdated (any other) firmware.
+ */
 myHome.status.onCameras = function(status, payload, url) {
-	// drop invalid response
-	if (status != 200) {
-		return;
-	}
-	
-	// drop previous issues
-	myHome.status.clearIssues("cameras");
-	
-	// response here is an array with info about all cameras
-	for (var i = 0; i < payload.length; i++) {
-		try {
-			var camera = payload[i];
-			// extract basic information about camera
-			
-			// detect connection problems
-			if (camera.status != "online") {
-				myHome.status.issues.connection.cameras.push({
-					id: camera.id,
-					name: camera.friendly_name,
-					status: camera.status
-				});
+
+	// read previous details
+	chrome.storage.local.get(["health.offline", "health.firmware"], function(storage) {
+		var offline = storage["health.offline"] || {};
+		var firmware = storage["health.firmware"] || {};
+		
+		// re-initialize with default value
+		offline.cameras = [];
+		firmware.cameras = [];
+
+		// response here is an array with info about all cameras
+		for (var i = 0; i < payload.length; i++) {
+			try {
+				var camera = payload[i];
+				
+				// extract basic information about camera
+				var device = {
+						id: camera.id,
+						name: camera.friendly_name
+				};
+				
+				// detect connection problems
+				if (camera.status != "online") {
+					myHome.status.appendIssue(offline.cameras, device, camera.status);
+				};
+				
+				// detect outdated firmware
+				if (camera.firmware_status != "up_to_date") {
+					myHome.status.appendIssue(firmware.cameras, device, camera.firmware_status); 
+				};
+			} catch (e) {
+				console.error(e);
 			};
-			
-			// detect outdated firmware
-			if (camera.firmware_status != "up_to_date") {
-				myHome.status.issues.firmware.cameras.push({
-					id: camera.id,
-					name: camera.friendly_name,
-					status: camera.firmware_status
-				});
-			}
-		} catch (e) {
-			console.error(e);
-		}
-	}
+		};
+		
+		// publish collected information 
+		chrome.storage.local.set({"health.offline": offline});
+		chrome.storage.local.set({"health.firmware": firmware});
+	});
 };
 
-// /api/v1/me/basestations handler 
-myHome.status.onBasestations = function(status, payload, url) {
-	// ignore invalid response
-	if (status != 200) {
-		return;
-	}
-	
-	// drop all previous issues
-	myHome.status.clearIssues("basestations");
-	myHome.status.clearIssues("sensors");
-	
-	// right now only one Gigaset elements basestation can be connected
-	// to the single account - but API seems to support many basestations
-	for (var i = 0; i < payload.length; i++) {
-		var basestation = payload[i];
-		
-		// find basestation issues
-		try {
-			// detect connection problems
-			if (basestation.status != "online") {
-				myHome.status.issues.connection.basestations.push({
-					id: basestation.id,
-					name: basestation.friendly_name,
-					status: basestation.status
-				});
-			};
-			
-			// detect outdated firmware
-			if (basestation.firmware_status != "up_to_date") {
-				myHome.status.issues.connection.basestations.push({
-					id: basestation.id,
-					name: basestation.friendly_name,
-					status: basestation.firmware_status
-				});
-			}
-		} catch (e) {
-			console.error(e);
-		}
-		
-		// find sensors issues
-		for (var j = 0; j < basestation.sensors.length; j++) {
-			var sensor = basestation.sensors[j];
-			
-			// detect connection problems
-			if (sensor.status != "online") {
-				myHome.status.issues.connection.sensors.push({
-					id: sensor.id,
-					name: sensor.friendly_name,
-					type: sensor.type,
-					status: sensor.status
-				});
-			};
-			
-			// detect outdated firmware
-			if (sensor.firmware_status != "up_to_date") {
-				myHome.status.issues.firmware.sensors.push({
-					id: sensor.id,
-					name: sensor.friendly_name,
-					type: sensor.type,
-					status: sensor.firmware_status
-				});
-			}
-			
-			// detect problems with be battery
-			if (sensor.hasOwnProperty("battery") && sensor.battery.state != "ok") {
-				myHome.status.issues.battery.sensors.push({
-					id: sensor.id,
-					name: sensor.friendly_name,
-					type: sensor.type,
-					status: sensor.battery.state
-				});
-			}
-			
-			// detect problems with the position
-			if (sensor.hasOwnProperty("position_status")) {
-				switch (true) {
-				case (sensor.position_status == "open"):
-				case (sensor.position_status == "closed"):
-					// ignore correct positions
-					break;
 
-				default:
-					myHome.status.issues.position.sensors.push({
-						id: sensor.id,
-						name: sensor.friendly_name,
-						type: sensor.type,
-						status: sensor.position_status
-					});	
-					break;
+/**
+ * /api/v1/me/basestations callback
+ * 
+ * 
+ */
+myHome.status.onBasestations = function(status, payload, url) {
+	
+	// read previous details
+	chrome.storage.local.get(["health.offline", "health.firmware",
+	                          "health.battery", "health.postion"], function(storage) {
+		
+		var offline = storage["health.offline"] || {};
+		var firmware = storage["health.firmware"] || {};
+		var battery = storage["health.battery"] || {};
+		var position = storage["health.postion"] || {};
+		
+		// re-initialize with default value
+		offline.basestations = [];
+		offline.sensors = [];
+		firmware.basestations = [];
+		firmware.sensors = [];
+		battery.sensors = [];
+		position.sensors = [];
+	
+		// right now only one Gigaset elements basestation can be connected
+		// to the single account - but API seems to support many basestations
+		for (var i = 0; i < payload.length; i++) {
+			var basestation = payload[i];
+
+			// minimal information about this basestation
+			var device = {
+				id: basestation.id,
+				name: basestation.friendly_name,
+			};
+			
+			// find basestation issues
+			try {
+				// detect connection problems
+				if (basestation.status != "online") {
+					myHome.status.appendIssue(offline.basestations, device, basestation.status);
+				}
+				
+				// detect outdated firmware
+				if (basestation.firmware_status != "up_to_date") {
+					myHome.status.appendIssue(firmware.basestations, device, basestation.firmware_status);
+				};
+			} catch (e) {
+				console.error(e);
+			};
+		
+			// find sensors issues
+			for (var j = 0; j < basestation.sensors.length; j++) {
+				var sensor = basestation.sensors[j];
+				
+				// minimal information about this sensor
+				var device = {
+					id: sensor.id,
+					name: sensor.friendly_name,
+					type: sensor.type
+				};
+				
+				// detect connection problems, 
+				// can't be != "online" because of uncalibrated door sensor where status 
+				// is "not_calibrated" 
+				if (sensor.status == "offline") {	
+					myHome.status.appendIssue(offline.sensors, device, sensor.status);
+				};
+				
+				// detect outdated firmware
+				if (sensor.firmware_status != "up_to_date") {
+					myHome.status.appendIssue(firmware.sensors, device, sensor.firmware_status);
+				};
+				
+				// detect problems with battery
+				if (sensor.hasOwnProperty("battery") && sensor.battery.state != "ok") {
+					myHome.status.appendIssue(battery.sensors, device, sensor.battery.state);
+				};
+				
+				// detect problems with the position
+				if (sensor.hasOwnProperty("position_status")) {
+					switch (true) {
+						case (sensor.position_status == "open"):
+						case (sensor.position_status == "closed"):
+							// ignore correct positions
+							break;
+	
+						default:
+							myHome.status.appendIssue(position.sensors, device, sensor.position_status);
+							break;
+					}
 				}
 			}
 		}
-	}
+		
+		// publish collected information 
+		chrome.storage.local.set({"health.offline": offline});
+		chrome.storage.local.set({"health.firmware": firmware});
+		chrome.storage.local.set({"health.battery": battery});
+		chrome.storage.local.set({"health.postion": position});
+	});
 };
 
-// refresh My Home health status
-myHome.status.refresh = function() {
-	// evaluate issues
-	var health = myHome.status.getHealth(myHome.status.issues, myHome.status.sensitivity);
-	
-	// update cached status
-	myHome.status.health = health;
-	
-	var icon = "green";
-	
-	// show health via My Home icon
-	if (health.errors.length > 0) {
-		icon = "red";
-	} else if (health.warnings.length > 0) {
-		icon = "yellow";
-	} else if (health.infos.length > 0) {
-		icon = "blue";
-	};
-
-	// set correct My Home icon
-	myHome.icons.setExtensionIcon(icon);
-};
 
 // synchronize status
-myHome.status.sync = function(){
-
-	// timer for delayed refresh
-	var timer = undefined;
-	// refresh status with some delay
-	function delayedRefresh() {
-		// clear previous timer if any
-		if (timer !== undefined) {
-			window.clearTimeout(timer);
-		}
-		// restart refresh timer
-		timer = window.setTimeout(myHome.status.refresh, myHome.status.refreshDelay);
-	};
+myHome.status.sync = function(request, sender, response){
 	
+	// filter events
+	if (request.name != "myHome.status.sync") {
+		return
+	}
+
 	// synchronize with health endpoint
 	gigaset.request.get(gigaset.health(), function(status, payload, url) {
 		myHome.status.onHealth(status, payload, url);
-		delayedRefresh();
 	});
 			
 	// synchronize basestatio & sensors
 	gigaset.request.get(gigaset.basestations.info(), function(status, payload, url) {
 		myHome.status.onBasestations(status, payload, url);
-		delayedRefresh();
 	});
 	
 	// synchronize camera
 	gigaset.request.get(gigaset.cameras.info(), function(status, payload, url) {
 		myHome.status.onCameras(status, payload, url);
-		delayedRefresh();
 	});
 };
 
+
+/**
+ * Configure myHome.events handler.
+ */
+chrome.runtime.onInstalled.addListener(function(details) {
+	// myHome.events.sync callback
+	chrome.runtime.onMessage.addListener(myHome.status.sync);
+
+	console.debug("myHome.status installed");
+});
 
