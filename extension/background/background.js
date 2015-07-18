@@ -21,6 +21,52 @@ myHome.background.setBadgeText = function(unread) {
 };
 
 /**
+ * Set color of the My Home icon according to the current status. 
+ */
+myHome.background.setMainIcon = function() {
+	
+	// check if each item is empty or not
+	function isEmpty(items) {
+
+		var keys = Object.keys(items);
+		for (var i = 0; i < keys.length; i++) {
+
+			if (items[keys[i]].length) {
+				// this key is not empty
+				return false;
+			}
+		}
+		
+		// all items are empty
+		return true;
+	}
+	
+	chrome.storage.local.get(["health.intrusion", "health.offline", "health.firmware",
+	                          "health.battery", "health.position"], function(storage) {
+		
+		// default color
+		var color = "green";
+		
+		// detect problems
+		if (!isEmpty(storage["health.intrusion"])) {
+			color = "red";
+		} else if (!isEmpty(storage["health.offline"])) {
+			color = "red";
+		} else if (!isEmpty(storage["health.battery"])) {
+			color = "yellow";
+		} else if (!isEmpty(storage["health.position"])) {
+			color = "yellow";
+		} else if (!isEmpty(storage["health.firmware"])) {
+			color = "blue";
+		}
+		
+		// set new My Home icon color
+		myHome.icons.setExtensionIcon(color);
+	});
+};
+
+
+/**
  * Handle changed in chrome.storage.
  */
 myHome.background.onStorageChanges = function(changes, areaName) {
@@ -39,6 +85,14 @@ myHome.background.onStorageChanges = function(changes, areaName) {
 			var unread = changes[key].newValue;
 			// set badge text
 			myHome.background.setBadgeText(unread);
+			break;
+			
+		case "health.intrusion":
+		case "health.offline":
+		case "health.firmware":
+		case "health.battery":
+		case "health.position":
+			myHome.background.setMainIcon();
 			break;
 
 		default:
@@ -95,6 +149,9 @@ chrome.runtime.onInstalled.addListener(function(details) {
 	
 	// and synchronize now
 	myHome.background.onAlarm();
+	
+	// set color of the My Home icon
+	myHome.background.setMainIcon();
 });
 
 

@@ -112,12 +112,12 @@ myHome.status.onBasestations = function(status, payload, url) {
 	
 	// read previous details
 	chrome.storage.local.get(["health.offline", "health.firmware",
-	                          "health.battery", "health.postion"], function(storage) {
+	                          "health.battery", "health.position"], function(storage) {
 		
 		var offline = storage["health.offline"] || {};
 		var firmware = storage["health.firmware"] || {};
 		var battery = storage["health.battery"] || {};
-		var position = storage["health.postion"] || {};
+		var position = storage["health.position"] || {};
 		
 		// re-initialize with default value
 		offline.basestations = [];
@@ -201,7 +201,7 @@ myHome.status.onBasestations = function(status, payload, url) {
 		chrome.storage.local.set({"health.offline": offline});
 		chrome.storage.local.set({"health.firmware": firmware});
 		chrome.storage.local.set({"health.battery": battery});
-		chrome.storage.local.set({"health.postion": position});
+		chrome.storage.local.set({"health.position": position});
 	});
 };
 

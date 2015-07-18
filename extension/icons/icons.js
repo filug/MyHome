@@ -4,7 +4,6 @@ myHome.icons = {};
 
 // set My Home extension icon
 myHome.icons.setExtensionIcon = function(color) {
-	
 	// path to "icons" directory
 	var path = chrome.extension.getURL("icons");
 	
