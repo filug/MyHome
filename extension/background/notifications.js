@@ -49,6 +49,10 @@ myHome.notifications.onNewEvents = function(request, sender, response) {
 					// for homecoming, friendly name of sensor (always motion sensor) is not available
 					item.message = type;
 					break;
+					
+				case "yc01.motion":
+					item.message = type + " (" + event.source_id + ")";
+					break;
 
 				default:
 					if( event.o.hasOwnProperty("friendly_name") ) {
@@ -103,7 +107,7 @@ myHome.notifications.onClosed = function(notificationId, byUser) {
 /**
  * Notification popup was clicked by the user.
  */
-myHome.notifications.onClicked= function(notificationId) {
+myHome.notifications.onClicked = function(notificationId) {
 	// notification clicked by the user is not closed,
 	// here such behavior is implemented
 
