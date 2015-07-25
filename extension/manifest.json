@@ -13,7 +13,7 @@
             "38": "icons/home/38/green.png"
         },
         "default_title": "My Home",
-        "default_popup": "popup/myhome.html"
+        "default_popup": "popup/popup.html"
     },
 
     "icons": {

@@ -23,3 +23,20 @@ myHome.icons.setExtensionIcon = function(color) {
 myHome.icons.getNotificationIcon = function() {
 	return chrome.extension.getURL("icons") + "/home/48/green.png";
 };
+
+myHome.icons.getSensorTypeIcon = function(type) {
+	
+	var icon = "unknown.png";
+	
+	if (type.startsWith("ds")) {
+		icon = "door.png";
+	} else if (type.startsWith("ws")){
+		icon = "window.png";
+	} else if (type.startsWith("ps")){
+		icon = "motion.png";
+	} else if (type.startsWith("is")){
+		icon = "siren.png";
+	}
+	
+	return chrome.extension.getURL("icons") + "/" + icon;
+};

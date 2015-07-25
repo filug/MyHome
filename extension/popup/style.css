@@ -1,0 +1,77 @@
+/*
+ color template http://www.colourlovers.com/palette/623761/Walking_Away
+*/
+
+
+
+
+#name {
+    text-align: center;
+    font-size: large;
+    font-weight: bold;
+    color: black;
+}
+
+#positions td {
+    border: 0px solid black;
+    padding-left: 3px;
+    padding-right: 3px;
+    color: gray;
+}
+
+#positions td:last-child {
+    width: 100%;
+}
+
+tbody {
+	overflow: auto;
+}
+
+#events td {
+    border: 0px solid black;
+    white-space: nowrap;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+#events td:first-child{
+    text-align: center;
+}
+
+.events_counter {
+	text-align: center;
+	font-style: italic;
+}
+
+.section_name {
+	font-weight: bold;
+	padding: 3px;
+	color: black;
+}
+
+.event_even {
+	color: gray;
+}
+.event_odd {
+	color: gray;
+}
+
+body {
+    background: white;
+}
+
+
+#events tr:nth-child(even) {
+	background: lightblue;
+} 
+
+#events tr:nth-child(odd) {
+	background: lightgray;
+}
+
+
+
+img {
+	width: 20px;
+    height: 20px;
+}
